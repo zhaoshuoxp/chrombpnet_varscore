@@ -40,9 +40,8 @@ conda activate chrombpnet
 
 Run the pipeline using the `run_analysis.sh` script. It requires two arguments: the SNP list file and the Cell Type name.
 
-Bash
-
 ```
+conda activate chrombpnet
 ./run_analysis.sh <snp_file> <cell_type>
 ```
 
@@ -50,15 +49,11 @@ Bash
 
 To analyze SMC (Smooth Muscle Cells):
 
-Bash
-
 ```
 ./run_analysis.sh CAD_loci_SNP.txt SMC
 ```
 
 To analyze modSMC (Modulated SMC):
-
-Bash
 
 ```
 ./run_analysis.sh CAD_loci_SNP.txt modSMC
@@ -69,8 +64,6 @@ Bash
 ## Input File Format
 
 The SNP file must be a tab-separated or space-separated file with **no header**, containing the following 5 columns:
-
-Plaintext
 
 ```
 chr1    2320766    C    T    rs36096196
@@ -83,8 +76,6 @@ chr1    3409946    G    A    rs116710059
 ## Output Structure
 
 Results are organized by dataset (`Multiome_Results` or `CZI_Results`) and Cell Type.
-
-Plaintext
 
 ```
 ./Multiome_Results/
