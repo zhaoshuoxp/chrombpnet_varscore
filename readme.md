@@ -1,106 +1,114 @@
-# ChromBPNet Variant Analysis Pipeline
+- # ChromBPNet Variant Analysis Pipeline
 
-This pipeline automates the process of variant scoring, statistical filtering, and visualization using **ChromBPNet**. It supports analysis across multiple datasets (e.g., Multiome & CZI) and handles cell-type name mapping automatically.
+  This pipeline automates the process of variant scoring, statistical filtering, and visualization using **ChromBPNet**. It allows for flexible analysis by manually specifying the model fold directory and the desired output location.
 
-## Prerequisites & Environment
+  ## Prerequisites & Environment
 
-Before running the pipeline, ensure you have activated the correct Conda environment containing `chrombpnet`, `deepdish`, `logomaker`, etc.
+  Ensure you have activated the Conda environment containing `chrombpnet`, `deepdish`, `logomaker`, and other dependencies.
 
-Bash
+  Bash
 
-```
-# installation:https://github.com/kundajelab/chrombpnet?tab=readme-ov-file#installation
-conda activate chrombpnet
-```
+  ```
+  # Installation reference: https://github.com/kundajelab/chrombpnet
+  conda activate chrombpnet
+  ```
 
-## Setup
+  ## Setup
 
-1. Ensure the following three scripts are in the same directory:
+  1. **Script Files**: Ensure the following three scripts are in the same directory:
 
-   - `run_analysis.sh` (Main control script)
-   - `filter_snps.py` (Statistical filtering script)
-   - `plot_snps.py` (Visualization script)
+     - `run_analysis.sh` (Main control script)
+     - `filter_snps.py` (Statistical filtering & ensembling)
+     - `plot_snps.py` (Visualization & SHAP logo generation)
 
-2. Make the main script executable:
+  2. **Permissions**: Make the main script executable:
 
-   Bash
+     Bash
 
-   ```
-   chmod +x run_analysis.sh
-   ```
+     ```
+     chmod +x run_analysis.sh
+     ```
 
-3. **IMPORTANT Configuration**: Open `run_analysis.sh` and ensure the following paths point to the correct locations on your server:
+  3. **Configuration**: Open `run_analysis.sh` and verify that the following global paths match your server environment:
 
-   - `CHROM_SIZE`
-   - `GENOME_FA`
-   - `SCORER_PATH` (Path to `variant_shap.py` / `variant_scoring.py`)
-   - `MULTIOME_MODEL_ROOT` & `CZI_MODEL_ROOT` (Paths to trained models)
+     - `CHROM_SIZE`: Path to `hg38.chrom.sizes`.
+     - `GENOME_FA`: Path to `hg38.fa`.
+     - `SCORER_PATH`: Path to the `variant-scorer/src` directory (containing `variant_shap.py`).
 
-## Usage
+  ## Usage
 
-Run the pipeline using the `run_analysis.sh` script. It requires two arguments: the SNP list file and the Cell Type name.
+  The pipeline now requires **four** arguments to provide maximum flexibility:
 
-```
-conda activate chrombpnet
-./run_analysis.sh <snp_file> <cell_type>
-```
+  Bash
 
-### Examples
+  ```
+  ./run_analysis.sh <snp_file> <cell_type> <models_dir> <output_dir>
+  ```
 
-To analyze SMC (Smooth Muscle Cells):
+  ### Arguments:
 
-```
-./run_analysis.sh CAD_loci_SNP.txt SMC
-```
+  1. **`snp_file`**: Path to the list of variants to score.
+  2. **`cell_type`**: A label for the cell type (used for naming folders and plot titles).
+  3. **`models_dir`**: The parent directory containing the 5-fold models.
+     - *Structure expected*: `<models_dir>/fold_0/models/chrombpnet_nobias.h5` (up to fold_4).
+  4. **`output_dir`**: The root directory where results will be saved.
 
-To analyze modSMC (Modulated SMC):
+  ### Example:
 
-```
-./run_analysis.sh CAD_loci_SNP.txt modSMC
-```
+  Bash
 
-*Note: The script automatically handles mapping between Multiome names (e.g., `SMC`) and CZI names (e.g., `Smooth_Muscle_Medial`).*
+  ```
+  ./run_analysis.sh my_snps.txt SMC /nfs/data/models/SMC_v1 /home/user/project/results
+  ```
 
-## Input File Format
+  ------
 
-The SNP file must be a tab-separated or space-separated file with **no header**, containing the following 5 columns:
+  ## Input File Format
 
-```
-chr1    2320766    C    T    rs36096196
-chr1    3409348    C    A    rs2493298
-chr1    3409946    G    A    rs116710059
-```
+  The SNP file must be a tab-separated (TSV) file with **no header**, containing these 5 columns:
 
-*Columns: Chromosome, Position (1-based), Ref Allele, Alt Allele, Variant ID.*
+  Plaintext
 
-## Output Structure
+  ```
+  chr1    2320766    C    T    rs36096196
+  chr1    3409348    C    A    rs2493298
+  ```
 
-Results are organized by dataset (`Multiome_Results` or `CZI_Results`) and Cell Type.
+  - **Columns**: Chromosome, Position (1-based), Ref Allele, Alt Allele, Variant ID.
 
-```
-./Multiome_Results/
-    └── SMC/
-        ├── fold_0/ ... fold_4/         # Raw scoring output
-        ├── SMC_ensemble_scores.tsv     # Aggregated scores (Mean/Std across folds)
-        ├── SMC_sig_hits.tsv            # Filtered significant SNPs (Top hits)
-        └── plots/                      # Visualization PDFs
-            ├── rs36096196.pdf
-            └── ...
-```
+  ------
 
-### Key Output Files
+  ## Output Structure
 
-- **`\*_ensemble_scores.tsv`**: Contains metrics like `logfc`, `jsd`, and the combined score `abs_logfc_x_jsd` averaged across 5 folds.
-- **`\*_sig_hits.tsv`**: A subset of SNPs filtered by significance (default: p<0.05, logfc>0.25).
-- **`plots/\*.pdf`**: Visualization containing:
-  1. Predicted chromatin accessibility profile (Ref vs Alt).
-  2. Ref allele SHAP motif logo.
-  3. Alt allele SHAP motif logo.
+  Results are organized within your specified `<output_dir>` under a subfolder named after the `<cell_type>`.
 
-## References
+  Plaintext
 
-This pipeline utilizes **ChromBPNet** for deep learning-based chromatin accessibility prediction.
+  ```
+  <output_dir>/
+  └── <cell_type>/
+      ├── fold_0/ ... fold_4/         # Raw scoring & SHAP outputs per fold
+      ├── <cell_type>_ensemble_scores.tsv  # Mean/Std scores across all 5 folds
+      ├── <cell_type>_sig_hits.tsv         # Filtered significant SNPs
+      └── plots/                           # Visualization PDFs
+          ├── rs36096196.pdf
+          └── ...
+  ```
 
-- **Chrombpnet Repository**: https://github.com/kundajelab/chrombpnet
-- **Variant-scorer Repository**: https://github.com/kundajelab/variant-scorer
-- **Paper**: *Nair, S., et al. (2022). "ChromBPNet: A method to correct biases in chromatin accessibility data."*
+  ------
+
+  ## Key Output Files
+
+  - **`\*_ensemble_scores.tsv`**: Contains averaged metrics across the 5 folds, including `logFC`, `JSD` (Jensen-Shannon Divergence), and the combined score `abs_logfc_x_jsd`.
+  - **`\*_sig_hits.tsv`**: A filtered subset of the ensemble scores (typically filtered by p-value and effect size).
+  - **`plots/\*.pdf`**: Detailed visualizations for each variant, including:
+    1. **Predicted Tracks**: Chromatin accessibility profiles for Ref vs. Alt alleles.
+    2. **SHAP Logos**: Sequence importance motifs for both Ref and Alt alleles to visualize motif disruption.
+
+  ------
+
+  ## References
+
+  - **ChromBPNet**: https://github.com/kundajelab/chrombpnet
+  - **Variant-scorer**: https://github.com/kundajelab/variant-scorer
+  - **Paper**: Nair, S., et al. (2022). *"ChromBPNet: A method to correct biases in chromatin accessibility data."*
